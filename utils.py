@@ -433,64 +433,88 @@ task6_generate_dataset(df,"task6_test.tsv")
 
 
 
+#============================================= task 9 =============================================#
 
-
-#============================================= task 9(bak) =============================================#
-
-
-def mask_message1(row):
-    code = row["full_code"]
-    pattern = r'(log\.[a-zA-Z_]+|logger\.[a-zA-Z_]+)\((.*)\)'
-    match = re.search(pattern, row["full_code"], flags=re.IGNORECASE)
-
-    if match:
-        logging_statement = match.group(2)
-        masked_code = re.sub(pattern, r'\1.("UNKNOWN")', code, flags=re.IGNORECASE,count=0)
-        print(masked_code)
-
-    # Extract and filter log levels
-    labels = re.findall(pattern, code, flags=re.IGNORECASE)
-    print(logging_statement)
+def extract_log_mes(row):
+    #这个函数可以正确提取到log_messages,但是替换有问题，会漏和误替换。
+    # 正则表达式模式，用于匹配log括号内的内容
+    pattern = r'\b(?:LOG|LOGGER)\.(?:debug|info|warn|error|trace|fatal)\((.*?)\);'
     
-    return masked_code, labels
 
-#row = {"full_code": '123 hhha LOG.debug(""determine record resources for data model {}"", finalDataModel.getUuid()); 123 hhha LOG.info(""determine"", finalDataModel.getUuid());'}
-#mask_message1(row)
+    matches = re.findall(pattern, row['logging_code_labels'], flags = re.MULTILINE | re.IGNORECASE)
+
+    # 将匹配结果存储在一个列表中
+    log_messages = [match for match in matches]
+    return log_messages
+
+
+
+def mask_log_mes(row):
+    #1.从label中提取出所有log statements为一个list
+    #匹配到以line开头然后接n个空格，；结尾的句子，然后括号内的就是匹配的内容，即log statement
+    logging_code_labels = row['logging_code_labels']
+    full_code = row['full_code']
+    log_pattern = r'<line\d+>\s+(.*?);' 
+    log_matches = re.findall(log_pattern, logging_code_labels)
+
+    log_list = []
+
+    for log_match in log_matches:
+        log_list.append(log_match)
+    
+    #2.循环处理每个code的所有logs
+    for log in log_list:
+        #2.1.提取出log头
+        log_name_pattern = r'(\w+)\.' 
+        log_name_match = re.search(log_name_pattern, log)
+        if log_name_match:
+            log_name = log_name_match.group(1)
+        else:
+            #说明这个样本有问题，生成文件后，手动删除该条数据
+            log_name = 'DeleteMe!'
+        #2.2.提取出log level
+        log_level_pattern = r'\.(\w+)\('
+        log_level_match = re.search(log_level_pattern, log)
+        if log_level_match:
+            log_level = log_level_match.group(1)
+        else:
+            log_level = 'DeleteMe!'
+        #2.3.组合为mask = log.level(UNKNOWN)
+        mask = log_name + '.' + log_level + '(UNKNOWN)'
+        #2.4.在full_code中查找这个log statement，并替换为mask
+        full_code = full_code.replace(log, mask)
+    
+    #3.return masked_full_code, log statements
+    return full_code,log_list
 
 
 
 
 def task9_generate_dataset(df,new_file_path):
-    df["code"],df["label"] = zip(*df.apply(mask_message, axis=1))
-    df = df[['code', 'full_code', 'label']]
-    print(df)
-    df.to_csv(new_file_path, sep='\t', index=True)
-
-
-
-def mask_message(row):
-    code = row["full_code"]
-    #pattern = r'((log|logger)\.[a-zA-Z_]+\()(.*?)(\))'
-    pattern = r'(log\.[a-zA-Z_]+|logger\.[a-zA-Z_]+)\((.*)\)'
-    masked_code = code
-    logging_statements = []
-
-    for match in re.finditer(pattern, code, flags=re.IGNORECASE):
-        logging_statement = match.group(3)
-        logging_statements.append(logging_statement)
-        masked_logging_statement = match.group(1) + '"UNKNOWN"' + match.group(4)
-        masked_code = masked_code.replace(match.group(0), masked_logging_statement)
     
-        print(masked_code)
-    #print(masked_code)
-    #print(logging_statement)
+    df["log_message"] = df.apply(extract_log_mes, axis=1)
+    df["masked_code"],df["log_statement"] = zip(*df.apply(mask_log_mes, axis=1))
 
-    return masked_code, logging_statements
+    print(df)
+    new_df = df[['full_code','masked_code','log_statement','log_message']]
+    new_df.to_csv(new_file_path, sep='\t', index=False)
+
+
+# df = pd.read_csv(os.path.join("./reformatted_data", "source_just_test.tsv"), sep='\t') 
+# task9_generate_dataset(df,"task9_just_test.tsv")
+
+# df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
+# task9_generate_dataset(df,"task9_eval.tsv")
+
+# df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
+# task9_generate_dataset(df,"task9_test.tsv")
+
+# df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
+# task9_generate_dataset(df,"task9_train.tsv")
 
 
 
-#row = {"full_code": 'LOG.debug(""determine record resources for data model {}"", finalDataModel.getUuid());'}
-#mask_message(row)
+
 
 
 
@@ -660,84 +684,129 @@ def task8_generate_dataset(df,new_file_path):
 
 
 
-#============================================= task 9 =============================================#
 
-def extract_log_mes(row):
-    #这个函数可以正确提取到log_messages,但是替换有问题，会漏和误替换。
-    # 正则表达式模式，用于匹配log括号内的内容
-    pattern = r'\b(?:LOG|LOGGER)\.(?:debug|info|warn|error|trace|fatal)\((.*?)\);'
+
+
+#============================================= task 10 =============================================#
+
+
+# 1.得到一个log的样本库，一条log为一列
+
+def generate_log_lib(input_file,output_file):
+    with open(input_file, 'r', encoding='utf-8') as infile, open(output_file, 'w', encoding='utf-8', newline='') as outfile:
+        reader = csv.DictReader(infile, delimiter='\t')
+        # 创建目标TSV文件的列名
+        fieldnames = ['log_statements']
+        
+        # 创建CSV写入对象
+        writer = csv.DictWriter(outfile, fieldnames=fieldnames, delimiter='\t')
+        writer.writeheader()
+
+        for row in reader:      
+
+            logging_code_labels = row['logging_code_labels']
+            log_pattern = r'<line\d+>\s+(.*?);' 
+            log_matches = re.findall(log_pattern, logging_code_labels)
+
+            log_list = []
+
+            for log_match in log_matches:
+                #log_list.append(log_match)
+                writer.writerow({'log_statements': log_match})
+
+# input_file = "source_eval.tsv"
+# output_file = "log_library.tsv"
+# generate_log_lib(input_file,output_file)
+
+
+def get_code_line_num(row):
+    # 比如line0-3，返回4
+    logging_lines = re.findall(r"<line(\d+)>", row['full_code_index'])
+    #print(len(logging_lines))
+    return len(logging_lines)
+
+
+
+def get_a_random_log(file_name):
+    with open(file_name, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+
+    random_line_number = random.randint(1, len(lines) - 1)
+    random_line = lines[random_line_number]
+
+    # print(random_line)
+    return random_line
+
     
 
-    matches = re.findall(pattern, row['logging_code_labels'], flags = re.MULTILINE | re.IGNORECASE)
+def insert_random_log(full_code, logging_lines_num, line_index):
 
-    # 将匹配结果存储在一个列表中
-    log_messages = [match for match in matches]
-    return log_messages
+    insert_log = '<line' + str(line_index-1) + '> ' + get_a_random_log("log_library.tsv").replace("\n", "") + '; '
+    # print('insert_log:',insert_log)
 
+    new_code = full_code.replace('<line' + str(line_index-1) + '> ', insert_log + '<line' + str(line_index) + '> ')
 
+    # 4.循环i=len 到 x, 替换<line i> 为 <line i+1>, i--
+    for i in range (logging_lines_num, line_index-1, -1):
+        new_code = new_code.replace(f'<line{i}>', f'<line{i+1}>')
 
-def mask_log_mes(row):
-    #1.从label中提取出所有log statements为一个list
-    #匹配到以line开头然后接n个空格，；结尾的句子，然后括号内的就是匹配的内容，即log statement
-    logging_code_labels = row['logging_code_labels']
-    full_code = row['full_code']
-    log_pattern = r'<line\d+>\s+(.*?);' 
-    log_matches = re.findall(log_pattern, logging_code_labels)
+    # 5.最后会有两个<line x+1>,替换第一个为<line x>，指定只替换第一个
+    new_code = new_code.replace('<line' + str(line_index+1) + '> ','<line' + str(line_index) + '> ',1)
 
-    log_list = []
-
-    for log_match in log_matches:
-        log_list.append(log_match)
-    
-    #2.循环处理每个code的所有logs
-    for log in log_list:
-        #2.1.提取出log头
-        log_name_pattern = r'(\w+)\.' 
-        log_name_match = re.search(log_name_pattern, log)
-        if log_name_match:
-            log_name = log_name_match.group(1)
-        else:
-            #说明这个样本有问题，生成文件后，手动删除该条数据
-            log_name = 'DeleteMe!'
-        #2.2.提取出log level
-        log_level_pattern = r'\.(\w+)\('
-        log_level_match = re.search(log_level_pattern, log)
-        if log_level_match:
-            log_level = log_level_match.group(1)
-        else:
-            log_level = 'DeleteMe!'
-        #2.3.组合为mask = log.level(UNKNOWN)
-        mask = log_name + '.' + log_level + '(UNKNOWN)'
-        #2.4.在full_code中查找这个log statement，并替换为mask
-        full_code = full_code.replace(log, mask)
-    
-    #3.return masked_full_code, log statements
-    return full_code,log_list
+    # print('new_code:',new_code)
+    return insert_log, new_code
 
 
 
 
-def task9_generate_dataset(df,new_file_path):
-    
-    df["log_message"] = df.apply(extract_log_mes, axis=1)
-    df["masked_code"],df["log_statement"] = zip(*df.apply(mask_log_mes, axis=1))
+def task10_generate_dataset(df,new_file_path):
+    for index,row in df.iterrows():
+        random_num = random.randint(0, 3)
+        # print(random_num)
 
-    print(df)
-    new_df = df[['full_code','masked_code','log_statement','log_message']]
+        insert_log_list = []
+        new_code = row['full_code_index']
+
+        logging_lines_num = get_code_line_num(row)
+
+        # 3.构造随机的 <line x>，从log样本库中随机拿一条log, 拼接为 <line x> log xxx; <line x> 并替换在code中的 <line x>
+        line_index_list = set()
+        while len(line_index_list) < random_num:
+            line_index = random.randint(1, logging_lines_num - 1)
+            line_index_list.add(line_index)
+
+        # 将set转换回列表
+        line_index_list = sorted(list(line_index_list))
+
+
+        for i in range(random_num):
+            insert_log, new_code = insert_random_log(new_code,logging_lines_num+i,line_index_list[i])
+            # print(f'new_code{i}:', new_code)
+            insert_log_list.append(insert_log)
+        
+        df.loc[index, "new_code_index"] = new_code
+        df.loc[index, "insert_log"] = str(insert_log_list)
+
+        if random_num == 0:
+            df.loc[index, "insert_log"] = None
+
+    new_df = df[['new_code_index','full_code_index','insert_log']]
     new_df.to_csv(new_file_path, sep='\t', index=False)
+    print(new_df)
 
 
 # df = pd.read_csv(os.path.join("./reformatted_data", "source_just_test.tsv"), sep='\t') 
-# task9_generate_dataset(df,"task9_just_test.tsv")
+# task10_generate_dataset(df,"task10_just_test.tsv")
 
-# df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
-# task9_generate_dataset(df,"task9_eval.tsv")
+df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
+task10_generate_dataset(df,"task10_test.tsv")
 
-# df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-# task9_generate_dataset(df,"task9_test.tsv")
 
-# df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-# task9_generate_dataset(df,"task9_train.tsv")
+df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
+task10_generate_dataset(df,"task10_train.tsv")
+
+df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
+task10_generate_dataset(df,"task10_eval.tsv")
 
 
 
