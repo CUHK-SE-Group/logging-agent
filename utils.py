@@ -68,7 +68,34 @@ delete_dirty_data(df,output_file)
 """
 
 
+def filter_non_english_ascii_data(inputfile, outputfile):
 
+    # 匹配既不是英文字符又不是ASCII字符的内容
+    non_english_ascii_pattern = re.compile(r'[^\x00-\x7F]+')
+
+    # 打开TSV文件以读取
+    with open(inputfile, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+
+    # 用于存储过滤后的行
+    filtered_lines = []
+
+    count = 0
+
+    for line in lines:
+        if not non_english_ascii_pattern.search(line):
+            filtered_lines.append(line)
+        else:
+            count += 1
+    print('filtered num:',count)
+
+    # 打开一个新的TSV文件以写入
+    with open(outputfile, 'w', encoding='utf-8') as file:
+        file.writelines(filtered_lines)
+
+# filter_non_english_ascii_data("source_eval.tsv","source_eval.tsv")
+# filter_non_english_ascii_data("source_test.tsv","source_test.tsv")
+# filter_non_english_ascii_data("source_train.tsv","source_train.tsv")
 
 
 def identify_logging_statement_code_line(target_line, target_idx, lines):
@@ -798,15 +825,15 @@ def task10_generate_dataset(df,new_file_path):
 # df = pd.read_csv(os.path.join("./reformatted_data", "source_just_test.tsv"), sep='\t') 
 # task10_generate_dataset(df,"task10_just_test.tsv")
 
-df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-task10_generate_dataset(df,"task10_test.tsv")
+# df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
+# task10_generate_dataset(df,"task10_test.tsv")
 
 
-df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-task10_generate_dataset(df,"task10_train.tsv")
+# df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
+# task10_generate_dataset(df,"task10_train.tsv")
 
-df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
-task10_generate_dataset(df,"task10_eval.tsv")
+# df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
+# task10_generate_dataset(df,"task10_eval.tsv")
 
 
 
