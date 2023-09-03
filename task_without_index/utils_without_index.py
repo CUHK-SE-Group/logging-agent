@@ -35,9 +35,6 @@ def drop_duplicates_data(file_path):
 #drop_duplicates_data("source_eval.tsv")
 
 
-
-
-
 def delete_dirty_data(df,output_file):
     #删除包含'STATS_LOG'的行
     df = df[~df.apply(lambda row: row.astype(str).str.contains('STATS_LOG').any(), axis=1)]
@@ -66,7 +63,6 @@ output_file = 'source_train.tsv'
 df = pd.read_csv(output_file, sep='\t') 
 delete_dirty_data(df,output_file)
 """
-
 
 def filter_non_english_ascii_data(inputfile, outputfile):
 
@@ -142,12 +138,54 @@ def df_is_null(df):
     return empty_logging_code_count
 
 
+def generate_mix_file(inputfile,outputfile):
+    # 存储7个文件的DataFrame的字典
+    dfs = {}
 
+    # 循环遍历7个文件
+    for i in [1,3,5,6,7,8,10]:
+
+        file_name = f"task{i}_" + inputfile + "_without_index.tsv"
+        file_path = os.path.join("./", file_name)
+        
+        # 读取当前文件并存储在相应的DataFrame中
+        dfs[f'df{i}'] = pd.read_csv(file_path, sep='\t')
+
+    # 创建一个新的DataFrame来存储随机选择的行
+    num_rows = len(dfs['df1'])  # 假设每个文件的行数相同
+    num_samples = 10  # 你可以设置要从每个文件中选择的行数
+    selected_rows = []
+
+    for _ in range(num_rows):
+
+        # 随机选择一个文件
+        random_file_key = random.choice(list(dfs.keys()))  # 随机选择一个文件的键
+        random_file = dfs[random_file_key]  # 获取选定的文件        
+        
+        # 随机选择该文件中的一行
+        random_row = random_file.sample(n=1)
+        random_row = random_row[['code', 'label']]
+        
+        # 添加一个名为"task"的列，值为数据来源的文件名（如task1）
+        random_row['task'] = 'task' + random_file_key[2:]
+
+        # 将选定的行添加到selected_rows中
+        selected_rows.append(random_row)
+
+    # 将选定的行合并为一个新的DataFrame
+    new_df = pd.concat(selected_rows, ignore_index=True)
+
+    # 将新的DataFrame写入到一个新的TSV文件中
+    new_df.to_csv(outputfile, sep='\t', index=False)
+
+
+# generate_mix_file('eval','mixed_task_eval_without_index.tsv')
+# generate_mix_file('test','mixed_task_test_without_index.tsv')
+# generate_mix_file('train','mixed_task_train_without_index.tsv')
 
 
 
 #============================================= task 1 =============================================#
-
 
 
 def remove_random_logging_code(row):
@@ -186,112 +224,22 @@ def task1_generate_dataset(df,new_file_path):
     df.to_csv(new_file_path, sep='\t', index=True)
 
 
-"""
-#生成task1.1的数据集
-df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-task1_generate_dataset(df,"task1_train.tsv")
+# #生成task1的数据集
+# df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
+# task1_generate_dataset(df,"task1_train_without_index.tsv")
 
-df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-task1_generate_dataset(df,"task1_test.tsv")
+# df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
+# task1_generate_dataset(df,"task1_test_without_index.tsv")
 
-df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
-task1_generate_dataset(df,"task1_eval.tsv")
+# df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
+# task1_generate_dataset(df,"task1_eval_without_index.tsv")
 
-"""
+
 #测试
 #df = pd.read_csv(os.path.join("./reformatted_data", "source_just_test.tsv"), sep='\t') 
 #task1_generate_dataset(df,"task1_just_test.tsv")
 
 
-
-
-
-#============================================= task 2 =============================================#
-
-
-def extract_logging_line(row):
-    logging_lines = re.findall(r"<line(\d+)>", row['logging_code_labels'])
-    return [int(line) for line in logging_lines]
-
-
-def extract_full_line(row):
-    logging_lines = re.findall(r"<line(\d+)>", row['without_logging_code_index'])
-    list1 = [int(line) for line in logging_lines]
-    list1 = list(range(list1[-1]))
-    return list1
-
-
-def generate_line_index(df):
-    # 提取logging_line的列表
-    df['logging_line'] = df.apply(extract_logging_line, axis=1)
-    #print(df['logging_line'])
-
-    # 获取full_code_index的最后一个line数字
-    df['all_line'] = df.apply(extract_full_line, axis=1)    
-
-    return(df)
-    """
-                id                                          full_code  ... logging_line                                         all_line
-0            0  ['public class A {', '  public int enable(GL g...  ...          [3]                 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-1            1  ['public class A {', '  public static void gre...  ...     [30, 39]  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,...
-...        ...                                                ...  ...          ...                                                ...
-101398  106380  ['public class A {', '  private boolean doChec...  ...          [5]  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,...
-101399  106381  ['public class A {', '  @Test', '  public void...  ...         [50]  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,...
-    """
-
-
-def generate_random_logging_line(row):
-    line_index = random.choice(row['logging_line'])
-    line_index =  " <line" + str(line_index) + ">"
-    label = "Yes"
-    return line_index, label
-
-
-def generate_random_other_line(row):
-    all_line_without_logging = [line_num for line_num in row['all_line'] if line_num not in row['logging_line']]
-    line_index = random.choice(all_line_without_logging)
-    line_index =  " <line" + str(line_index) + ">"
-    label = "No"
-    return line_index, label
-
-
-def task2_generate_datasets(df,new_file):
-    # 选择前50%的数据
-    first_half_df = df.head(len(df)//2)
-    first_half_df['line_index'], first_half_df['label'] = zip(*first_half_df.apply(generate_random_logging_line, axis=1))
-
-    # 选择后50%的数据
-    second_half_df = df.tail(len(df)//2)
-    second_half_df['line_index'], second_half_df['label'] = zip(*second_half_df.apply(generate_random_other_line, axis=1))
-
-    # 合并两部分的数据
-    new_df = pd.concat([first_half_df, second_half_df])
-
-    # 选择所需的列
-    new_df = new_df[['without_logging_code_index','line_index', 'label']]
-
-    # 保存新的DataFrame为tsv文件
-    new_df = new_df.sample(frac=1, random_state=42)  # random_state 用于保证结果可复现，frac=1 表示抽取整个df
-    new_df.to_csv(new_file, sep='\t', index=False)
-    print(len(new_df))
-
-
-"""
-#生成task2的train数据集
-df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-new_df = generate_line_index(df)
-task2_generate_datasets(new_df,"task2_train.tsv")
-
-
-#生成task2的test数据集
-df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-new_df = generate_line_index(df)
-task2_generate_datasets(new_df,"task2_test.tsv")
-
-df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
-new_df = generate_line_index(df)
-task2_generate_datasets(new_df,"task2_eval.tsv")
-"""
 
 
 
@@ -301,9 +249,6 @@ task2_generate_datasets(new_df,"task2_eval.tsv")
 
 def get_logging_num(row):
 
-    full_code = ""
-    full_code = row['full_code']
-    
     pattern = r'<line\d+>\s+(.+?)(?=(?:<line\d+>)|$)'  #分组 (?:<line\d+>)|$，用于匹配下一个 <line(\d+)> 或者文本结束
     logging_lines = re.findall(pattern, row['logging_code_labels'])
 
@@ -319,14 +264,16 @@ def task3_generate_dataset(df,new_file_path):
     print(df)
     df.to_csv(new_file_path, sep='\t', index=True)
 
-"""
-#生成task3的数据集
-df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-task3_generate_dataset(df,"task3_train.tsv")
 
-df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-task3_generate_dataset(df,"task3_test.tsv")
-"""
+#生成task3的数据集
+# df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
+# task3_generate_dataset(df,"task3_train_without_index.tsv")
+
+# df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
+# task3_generate_dataset(df,"task3_test_without_index.tsv")
+
+# df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
+# task3_generate_dataset(df,"task3_eval_without_index.tsv")
 
 
 #测试
@@ -336,42 +283,9 @@ task3_generate_dataset(df,"task3_test.tsv")
 
 
 
-#============================================= task 4 =============================================#
 
-
-def get_logging_line(row):
-    logging_lines = re.findall(r"<line\d+>", row['logging_code_labels'])
-    #去重
-    #unique_lines = list(set(logging_lines))
-    unique_lines = list(OrderedDict.fromkeys(logging_lines))
-    return unique_lines
-
-
-def task4_generate_dataset(df,new_file_path):
-
-    df["label"] = (df.apply(get_logging_line, axis=1))
-
-    # 使用apply()和lambda函数将列表转化为字符串
-    df['label'] = df['label'].apply(lambda x: ', '.join(x))
-    new_df =  df[['without_logging_code_index','label']]
-
-    print(new_df)
-    new_df.to_csv(new_file_path, sep='\t', index=True)
-
-"""
-#生成task4的train数据集
-df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-task4_generate_dataset(df,"task4_train.tsv")
-
-
-#生成task4的test数据集
-df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-task4_generate_dataset(df,"task4_test.tsv")
-"""
 
 #============================================= task 5 =============================================#
-
-
 
 
 def mask_log_level(row, mask="UNKNOWN"):
@@ -392,7 +306,6 @@ def mask_log_level(row, mask="UNKNOWN"):
 
 
 
-
 def task5_generate_dataset(df,new_file_path):
     df["masked_code"],df["label"] = zip(*df.apply(mask_log_level, axis=1))
     df = df[['masked_code', 'full_code', 'label']]
@@ -401,14 +314,17 @@ def task5_generate_dataset(df,new_file_path):
 
 
 
-"""
-#生成task5的数据集
-df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-task5_generate_dataset(df,"task5_train.tsv")
 
-df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
-task5_generate_dataset(df,"task5_eval.tsv")
-"""
+#生成task5的数据集
+# df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
+# task5_generate_dataset(df,"task5_train_without_index.tsv")
+
+# df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
+# task5_generate_dataset(df,"task5_test_without_index.tsv")
+
+# df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
+# task5_generate_dataset(df,"task5_eval_without_index.tsv")
+
 #df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
 #task5_generate_dataset(df,"task5_test.tsv")
 
@@ -437,7 +353,6 @@ def replace_log_level_2_random_level(row):
     else:
         labels = [label[1] for label in labels if label[1].lower() in (level.lower() for level in logging_levels)]
 
-
     return new_code, labels
 
 
@@ -447,20 +362,23 @@ def task6_generate_dataset(df,new_file_path):
     print(df)
     df.to_csv(new_file_path, sep='\t', index=True)
 
-"""
+
 #生成task6的数据集
-df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-task6_generate_dataset(df,"task6_train.tsv")
+# df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
+# task6_generate_dataset(df,"task6_train_without_index.tsv")
 
-df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-task6_generate_dataset(df,"task6_test.tsv")
-"""
+# df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
+# task6_generate_dataset(df,"task6_test_without_index.tsv")
+
+# df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
+# task6_generate_dataset(df,"task6_eval_without_index.tsv")
 
 
 
 
 
-#============================================= task 9 =============================================#
+
+#============================================= task 7 =============================================#
 
 def extract_log_mes(row):
     #这个函数可以正确提取到log_messages,但是替换有问题，会漏和误替换。
@@ -473,7 +391,6 @@ def extract_log_mes(row):
     # 将匹配结果存储在一个列表中
     log_messages = [match for match in matches]
     return log_messages
-
 
 
 def mask_log_mes(row):
@@ -515,9 +432,7 @@ def mask_log_mes(row):
     return full_code,log_list
 
 
-
-
-def task9_generate_dataset(df,new_file_path):
+def task7_generate_dataset(df,new_file_path):
     
     df["log_message"] = df.apply(extract_log_mes, axis=1)
     df["masked_code"],df["log_statement"] = zip(*df.apply(mask_log_mes, axis=1))
@@ -527,194 +442,24 @@ def task9_generate_dataset(df,new_file_path):
     new_df.to_csv(new_file_path, sep='\t', index=False)
 
 
-# df = pd.read_csv(os.path.join("./reformatted_data", "source_just_test.tsv"), sep='\t') 
-# task9_generate_dataset(df,"task9_just_test.tsv")
 
 # df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
-# task9_generate_dataset(df,"task9_eval.tsv")
+# task7_generate_dataset(df,"task7_eval_without_index.tsv")
 
 # df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-# task9_generate_dataset(df,"task9_test.tsv")
+# task7_generate_dataset(df,"task7_test_without_index.tsv")
 
 # df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-# task9_generate_dataset(df,"task9_train.tsv")
-
-
-
-
-
-
-
-#============================================= task 11 =============================================#
-
-
-
-#提取logging statement
-def get_logging_statement(row):
-    code = row['without_logging_code']
-    pattern = r'\b(?:log|logger|LOGGER|LOG|log)\.[a-zA-Z]+\([^)]+\);'
-    print(row['logging_code_labels'])
-    #log_str = "<line5>    log.debug(""StartOf createProvider - REQUEST Insert /providers"");<line11>      logger.info(""createProvider exception"", e);<line13>    LOGGER.debug(""EndOf createProvider"");"
-    log_statements = re.findall(pattern, row['logging_code_labels'])
-    #log_statements = re.findall(pattern, log_str)
-    print(str(log_statements))
-    return code,log_statements
-
-#row = {"without_logging_code":'',"logging_code_labels": "<line5>    log.debug(""StartOf createProvider - REQUEST Insert /providers"");<line11>      logger.info(""createProvider exception"", e);<line13>    LOGGER.debug(""EndOf createProvider"");"}
-#get_logging_statement(row)
-
-
-def task11_generate_dataset(df,new_file_path):
-    df= df[['without_logging_code_index', 'logging_code_labels']]
-    print(df)
-    df.to_csv(new_file_path, sep='\t', index=True)
-
-"""
-
-df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-task11_generate_dataset(df,"task11_test.tsv")
-
-
-df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-task11_generate_dataset(df,"task11_train.tsv")
-
-df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
-task11_generate_dataset(df,"task11_eval.tsv")
-
-"""
-
-
-
-
-#============================================= task 12 =============================================#
-
-def task12_generate_dataset(df,new_file_path):
-    df= df[['without_logging_code', 'full_code']]
-    print(df)
-    df.to_csv(new_file_path, sep='\t', index=True)
-
-
-"""
-df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-task12_generate_dataset(df,"task12_test.tsv")
-
-
-df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-task12_generate_dataset(df,"task12_train.tsv")
-
-df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
-task12_generate_dataset(df,"task12_eval.tsv")
-"""
-
-
-
-
-
-
-
-#============================================= task 8 (doing) =============================================#
-
-
-#data = ['"".sendEvent value="" + value', '""Unable to added handler for {} due to missing classes on the classpath"",opClass.getSimpleName(),e', '""Failed to extract tags due to : {} Total Parser Errors : {}"",e.getMessage(),parserErrors', '""new ExtensionException(prototype.getClass())""', '"".sendEvent value="" + value', '""Unable to added handler for {} due to missing classes on the classpath"",opClass.getSimpleName(),e']
-
-#result_list = ['value', 'opClass.getSimpleName();e', 'e.getMessage();parserErrors', None, 'value', 'opClass.getSimpleName();e']
-
-def extract_variable1(row):
-    # 匹配并删除 "" "" 及其之间的内容
-    pattern = r'""(.*?)""'
-    result_list = []
-
-    for item in list(row['messages']):
-        result = re.sub(pattern, '', item)
-        result = re.sub(r'\s+', ' ', result)  # 删除多余的空格
-
-        result = result.replace('+', '')  # 删除 "+"
-        result = result.replace(',', ';')  # 将逗号替换为分号
-
-        if result and result[0] == ';':  # 如果结果不为空且第一个字符是分号
-            result = result[1:]  # 删除第一个字符（分号）        
-
-        result = result.strip() if result else None  # 去除首尾空格，如果结果为空则设置为 None
-        result_list.append(result)
-
-
-    return row['masked_code'],row['full_code'],result_list
-
-
-def mask_log_var(row):
-
-    # 正则表达式模式，用于匹配log括号内的内容
-    pattern = r'\b(?:LOG|LOGGER)\.(?:debug|info|warn|error|trace|fatal)\((.*?)\);'
-
-    matches = re.findall(pattern, row['logging_code_labels'], flags = re.MULTILINE | re.IGNORECASE)
-
-    # 将匹配结果存储在一个列表中
-    log_messages = [match.strip() for match in matches]
-
-    # 将匹配到的内容替换为 "UNKNOW"
-    # for match in matches:
-    #     print(match)
-    #     row['masked_code'] = re.sub(re.escape(match), "UNKNOWN", row['full_code'], flags=re.MULTILINE | re.IGNORECASE)
-    
-    pattern_1 = r'"(.*?)"'
-    for full_mes in log_messages:
-        print(full_mes)
-        match = re.search(pattern_1,full_mes)
-        mes = '\"\"' + match.group(1) + '\"\"'
-
-        print(mes)
-        extracted_mes = full_mes.replace('\"' + match.group(1) + '\"', "")
-        print(extracted_mes)
-
-    
-    row['masked_code'] = row['full_code']
-    return row['masked_code'],row['full_code'],log_messages
-
-
-
-def extract_variable(row):
-    # 匹配并删除 "" "" 及其之间的内容
-    pattern = r'""(.*?)""'
-    full_code = row['full_code']
-    result_list = []
-
-    for item in list(row['messages']):
-        mes = re.search(pattern,item)
- 
-        result = re.sub(pattern, '', item)
-
-        result = re.sub(r'\s+', ' ', result)  # 删除多余的空格
-
-        result = result.replace('+', '')  # 删除 "+"
-        result = result.replace(',', ';')  # 将逗号替换为分号
-
-        if result and result[0] == ';':  # 如果结果不为空且第一个字符是分号
-            result = result[1:]  # 删除第一个字符（分号）        
-
-        result = result.strip() if result else None  # 去除首尾空格，如果结果为空则设置为 None
-        result_list.append(result)
-
-    return row['masked_code'], full_code, result_list
-
-
-
-def task8_generate_dataset(df,new_file_path):
-    df["masked_code"],df["full_code"],df["var"] = zip(*df.apply(mask_log_var, axis=1))
-    #print(df)
-    new_df = df[['masked_code','full_code','var']]
-    new_df.to_csv(new_file_path, sep='\t', index=False)
-
+# task7_generate_dataset(df,"task7_train_without_index.tsv")
 
 #df = pd.read_csv(os.path.join("./reformatted_data", "source_just_test.tsv"), sep='\t') 
-#task8_generate_dataset(df,"taskx_just_test.tsv")
+#task7_generate_dataset(df,"task7_just_test.tsv")
 
 
 
 
 
-
-
-#============================================= task 10 =============================================#
+#============================================= task 8 =============================================#
 
 
 # 1.得到一个log的样本库，一条log为一列
@@ -781,12 +526,19 @@ def insert_random_log(full_code, logging_lines_num, line_index):
     new_code = new_code.replace('<line' + str(line_index+1) + '> ','<line' + str(line_index) + '> ',1)
 
     # print('new_code:',new_code)
+
+
+    #删除行号
+    pattern = r'<line\d+>'
+    new_code = re.sub(pattern,'', new_code, count=0)
+    insert_log = re.sub(pattern,'', insert_log, count=0)
+
     return insert_log, new_code
 
 
 
 
-def task10_generate_dataset(df,new_file_path):
+def task8_generate_dataset(df,new_file_path):
     for index,row in df.iterrows():
         random_num = random.randint(0, 3)
         # print(random_num)
@@ -811,30 +563,68 @@ def task10_generate_dataset(df,new_file_path):
             # print(f'new_code{i}:', new_code)
             insert_log_list.append(insert_log)
         
-        df.loc[index, "new_code_index"] = new_code
+        df.loc[index, "new_code"] = new_code
         df.loc[index, "insert_log"] = str(insert_log_list)
 
         if random_num == 0:
             df.loc[index, "insert_log"] = None
 
-    new_df = df[['new_code_index','full_code_index','insert_log']]
+
+    new_df = df[['code','label','insert_log']]
     new_df.to_csv(new_file_path, sep='\t', index=False)
     print(new_df)
 
 
-# df = pd.read_csv(os.path.join("./reformatted_data", "source_just_test.tsv"), sep='\t') 
-# task10_generate_dataset(df,"task10_just_test.tsv")
+
+def delete_task8_index(file_name):
+    df = pd.read_csv(os.path.join("./", file_name), sep='\t') 
+    for index,row in df.iterrows():
+        #删除行号
+        pattern = r'<line\d+>'
+        df.loc[index, "code"] = re.sub(pattern,'', row['code'], count=0)
+        df.loc[index, "label"] = re.sub(pattern,'', row['label'], count=0)
+    df.to_csv(file_name, sep='\t', index=False)
+
+# delete_task8_index("task8_test_without_index.tsv")
+# delete_task8_index("task8_train_without_index.tsv")
+# delete_task8_index("task8_eval_without_index.tsv")
+
+
+# df = pd.read_csv(os.path.join("./", "source_just_test.tsv"), sep='\t') 
+# task8_generate_dataset(df,"task8_just_test.tsv")
 
 # df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
-# task10_generate_dataset(df,"task10_test.tsv")
+# task8_generate_dataset(df,"task8_test_without_index.tsv")
 
 
 # df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
-# task10_generate_dataset(df,"task10_train.tsv")
+# task8_generate_dataset(df,"task8_train_without_index.tsv")
 
 # df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
-# task10_generate_dataset(df,"task10_eval.tsv")
+# task8_generate_dataset(df,"task8_eval_without_index.tsv")
 
 
+
+
+
+#============================================= task 10 =============================================#
+
+def task10_generate_dataset(df,new_file_path):
+    df['task'] = 'task10'
+    df = df[['without_logging_code', 'full_code', 'task']]
+    df = df.rename(columns={'without_logging_code': 'code', 'full_code': 'label'})
+
+    print(df)
+    df.to_csv(new_file_path, sep='\t', index=False)
+
+
+# df = pd.read_csv(os.path.join("./", "source_test.tsv"), sep='\t') 
+# task10_generate_dataset(df,"task10_test_without_index.tsv")
+
+# df = pd.read_csv(os.path.join("./", "source_train.tsv"), sep='\t') 
+# task10_generate_dataset(df,"task10_train_without_index.tsv")
+
+# df = pd.read_csv(os.path.join("./", "source_eval.tsv"), sep='\t') 
+# task10_generate_dataset(df,"task10_eval_without_index.tsv")
 
 
