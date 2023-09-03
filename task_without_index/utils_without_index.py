@@ -118,6 +118,7 @@ def identify_logging_statement_code_line(target_line, target_idx, lines):
     return logging_code_label, span
 
 
+
 def save_as_csv_file(data,new_filename):
     with open(new_filename, "w", newline="", encoding="utf-8") as output:
         fieldnames = ["index", "function"]
@@ -125,6 +126,7 @@ def save_as_csv_file(data,new_filename):
         csv_writer.writeheader()
         csv_writer.writerows(data)
     print("new functions saved to", new_filename)
+
 
 
 #计算logging_code_labels是否为空
@@ -138,45 +140,56 @@ def df_is_null(df):
     return empty_logging_code_count
 
 
-def generate_mix_file(inputfile,outputfile):
+
+
+# 1.打开所有7个文件，并存为存为7个df
+# 2.获取一个df的行数，默认所有都一样
+# 3.for row in len(df)
+# 4.random选择df，并给他们设置概率
+# 5.读取选择的df[row],写入新df中
+# 6.新df保存为新的tsv文件
+
+def generate_mix_file(inputfile, outputfile):
     # 存储7个文件的DataFrame的字典
     dfs = {}
-
-    # 循环遍历7个文件
-    for i in [1,3,5,6,7,8,10]:
-
+    
+    # 打开并读取所有7个文件，存为7个df
+    for i in [1, 3, 5, 6, 7, 8]:
         file_name = f"task{i}_" + inputfile + "_without_index.tsv"
         file_path = os.path.join("./", file_name)
         
         # 读取当前文件并存储在相应的DataFrame中
         dfs[f'df{i}'] = pd.read_csv(file_path, sep='\t')
 
+    # 获取一个df的行数，默认所有都一样
+    num_rows = len(dfs['df1'])  # 默认每个文件的行数相同
+    
     # 创建一个新的DataFrame来存储随机选择的行
-    num_rows = len(dfs['df1'])  # 假设每个文件的行数相同
-    num_samples = 10  # 你可以设置要从每个文件中选择的行数
     selected_rows = []
+    
+    # 为每个文件设置选择概率
+    file_weights = [0.25 if i in [1, 3] else 0.125 for i in [1, 3, 5, 6, 7, 8]]
+    print(file_weights)
 
-    for _ in range(num_rows):
+    # 循环遍历每一行
+    for row in range(num_rows):
+              
+        # 随机选择一个文件，并设置概率
+        random_file_key = random.choices(list(dfs.keys()), weights=file_weights)[0]
+        random_file = dfs[random_file_key]  # 获取选定的文件
+          
+        # 读取选择的df[row]，写入新df中
+        selected_row = random_file.iloc[row:row+1][['code', 'label']]
+        selected_row['task'] = 'task' + random_file_key[2:]  # 添加任务列
+        selected_rows.append(selected_row)
 
-        # 随机选择一个文件
-        random_file_key = random.choice(list(dfs.keys()))  # 随机选择一个文件的键
-        random_file = dfs[random_file_key]  # 获取选定的文件        
-        
-        # 随机选择该文件中的一行
-        random_row = random_file.sample(n=1)
-        random_row = random_row[['code', 'label']]
-        
-        # 添加一个名为"task"的列，值为数据来源的文件名（如task1）
-        random_row['task'] = 'task' + random_file_key[2:]
-
-        # 将选定的行添加到selected_rows中
-        selected_rows.append(random_row)
 
     # 将选定的行合并为一个新的DataFrame
     new_df = pd.concat(selected_rows, ignore_index=True)
-
+    
     # 将新的DataFrame写入到一个新的TSV文件中
     new_df.to_csv(outputfile, sep='\t', index=False)
+
 
 
 # generate_mix_file('eval','mixed_task_eval_without_index.tsv')
