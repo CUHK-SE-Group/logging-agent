@@ -7,8 +7,8 @@ import copy
 import os
 os.environ["WANDB_DISABLED"] = "true"
 
-model_id = "bloom-560m"
-max_length = 512
+model_id = "codellama-7b"
+max_length = 1024
 
 device_map = device_map = {"": int(os.environ.get("LOCAL_RANK"))}
 print("-------------", device_map)
@@ -88,6 +88,7 @@ training_args = TrainingArguments(
     logging_steps=100,
     save_strategy='epoch',
     learning_rate=5e-6,
+    num_train_epochs=3,
     # weight_decay=0.01,
     # max_steps=100,
     # lr_scheduler_type="cosine",

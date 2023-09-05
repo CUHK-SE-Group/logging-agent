@@ -6,7 +6,7 @@ def get_instruction_format(instruction,input):
     str0 = "### System: You are a logging agent designed to identify or generate logging statements for a given code snippet." + "\n"
     str1 = "### Instruction: " + instruction + "\n"
     str2 = "### Input: " + input + "\n"
-    str3 = "### Output: " 
+    str3 = "### Output:" 
 
     instruction_format = str1 + str2 + str3
     # print(instruction_format)
