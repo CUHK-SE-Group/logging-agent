@@ -15,7 +15,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_id, cache_dir="./", padding_side
 model = AutoModelForCausalLM.from_pretrained(model_id, cache_dir="./", device_map=device_map)
 print(model.hf_device_map)
 
-data_files = {"train": "mixed_task/task1_train_small.tsv", "eval": "mixed_task/task1_eval_small.tsv", "test": "mixed_task/task1_test_small.tsv"}
+data_files = {"train": "task_data/mixtasks_train_without_index.tsv", "eval": "task_data/mixtasks_eval_without_index.tsv", "test": "task_data/mixtasks_test_without_index.tsv"}
 datasets = load_dataset("csv", data_files=data_files, sep='\t')
 
 def _tokenize_fn(strings, tokenizer):
