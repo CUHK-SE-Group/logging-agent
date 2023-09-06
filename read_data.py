@@ -15,6 +15,7 @@ def get_instruction_format(instruction,input):
 
 
 def get_one_instrucion(task_name):
+    instruction = ""
     if task_name == "task1":
         prefix = ""
         instructions = [
