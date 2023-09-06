@@ -3,7 +3,7 @@ import pandas as pd
 import random
 
 def get_instruction_format(instruction,input):
-    str0 = "### System: You are a logging agent designed to identify or generate logging statements for a given code snippet." + "\n"
+    str0 = "### System: You are a logging agent designed to identify or generate log statements for a given code snippet." + "\n"
     str1 = "### Instruction: " + instruction + "\n"
     str2 = "### Input: " + input + "\n"
     str3 = "### Output:" 
@@ -23,7 +23,7 @@ def get_one_instrucion(task_name):
             "Analyze this code snippet and identify if further logging is needed.",
             "Examine this function and state whether it requires supplemental logging.",
             "Review this code and decide if extra logging would be beneficial.",
-            "Inspect this function and confirm if more logging statements should be added.",
+            "Inspect this function and confirm if more log statements should be added.",
             "Scrutinize this code to determine if the addition of more log statements is necessary.",
             "Please decide if additional logging is required for this code snippet.",
             "Check this code and confirm whether it needs more logging.",
@@ -34,15 +34,15 @@ def get_one_instrucion(task_name):
     if task_name == "task3":
         prefix = ""
         instructions = [
-            "Review this function and indicate the necessary number of logging statements.",
+            "Review this function and indicate the necessary number of log statements.",
             "Considering this code segment, provide the count of log statements that should be created.",
-            "Analyze this function and identify the needed amount of logging statements.",
+            "Analyze this function and identify the needed amount of log statements.",
             "Estimate the number of log statements essential for this code.",
-            "For this function, specify the count of the logging statements required.",
+            "For this function, specify the count of the log statements required.",
             "Study this code segment and determine the necessary number of logging instances.",
-            "Scrutinize this function and suggest how many logging statements are needed.",
+            "Scrutinize this function and suggest how many log statements are needed.",
             "Inspect this piece of code and specify the number of logs to be added.",
-            "Identify the number of logging statements required for this function.",
+            "Identify the number of log statements required for this function.",
             "Given this code snippet, estimate the needed count of log instances."
         ]
         suffix = " The expected output should be an integer."
@@ -51,15 +51,15 @@ def get_one_instrucion(task_name):
         prefix = "Log levels typically include 'fatal','error', 'warn', 'info', 'debug', and 'trace'. "
         instructions = [
             "In this function, please replace each 'UNKNOWN' log level with the corresponding log level based on its severity.",
-            "Assess the function and allocate correct log levels to the logging statements.",
-            "Please review the function, then determine and assign the appropriate log levels to each logging statement.",
-            "Analyze the function, find all logging statements labeled as 'UNKNOWN' and replace them with correct log levels.",
+            "Assess the function and allocate correct log levels to the log statements.",
+            "Please review the function, then determine and assign the appropriate log levels to each log statement.",
+            "Analyze the function, find all log statements labeled as 'UNKNOWN' and replace them with correct log levels.",
             "Identify each 'UNKNOWN' log level in the function and replace with suitable log levels based on their severity.",
-            "Examine the function and update 'UNKNOWN' log levels with the correct ones for each logging statement.",
-            "Carefully review the function and ensure all the logging statements are assigned with the correct log levels.",
-            "Assign appropriate log levels to each logging statement in the provided function, replacing 'UNKNOWN' log levels.",
+            "Examine the function and update 'UNKNOWN' log levels with the correct ones for each log statement.",
+            "Carefully review the function and ensure all the log statements are assigned with the correct log levels.",
+            "Assign appropriate log levels to each log statement in the provided function, replacing 'UNKNOWN' log levels.",
             "Inspect the given function and adjust 'UNKNOWN' log labels, substituting them with the determined log levels.",
-            "For each logging statement in the function, replace the 'UNKNOWN' log level with the correct severity level."
+            "For each log statement in the function, replace the 'UNKNOWN' log level with the correct severity level."
         ]
         suffix = " The expected output should be denoised log levels separated by commas."
         instruction = prefix + random.choice(instructions) + suffix
@@ -103,7 +103,7 @@ def get_one_instrucion(task_name):
             "Assess whether the code snippet contains any unnecessary or unrelated logs. If so, remove them.",
             "Inspect the code and identify any log messages that seem unessential or unrelated to the function's main task. Proceed to remove those.",
             "Look through the code to find any log entries that may be redundant or don't provide meaningful information, and remove them.",
-            "Study the code carefully and eliminate any logging statements that are not directly relevant to the function's operation.",
+            "Study the code carefully and eliminate any log statements that are not directly relevant to the function's operation.",
             "Go through the function, spot any irrelevant or unnecessary log entries, and remove them.",
             "Scan the function for any extraneous or unrelated log messages, and if found, remove them.",
             "Analyze the code, identify any irrelevant or superfluous log statements, and ensure they are deleted.",
@@ -115,17 +115,33 @@ def get_one_instrucion(task_name):
         prefix = ""
         instructions = [
             "Incorporate important log entries into this function to keep track of its operation.",
-            "Execute logging statements at critical points in the function to keep track of its progress.",
+            "Execute log statements at critical points in the function to keep track of its progress.",
             "Add meaningful logs in this function for potential debugging or execution tracing.",
-            "Mark significant actions in the given function with logging statements.",
+            "Mark significant actions in the given function with log statements.",
             "Add log statements at crucial locations of the function to aid in tracking and debugging.",
             "Generate logs for this function to record important actions or variable values during its execution.",
             "Please embed appropriate logging language within this function to aid in monitoring its running state.",
-            "Ensure the function's significant operation points are annotated with logging statements.",
-            "Improvise this function by adding logging statements which provide insights about its inner workings.",
-            "In this function, please incorporate logging statements to capture significant events during the execution."
+            "Ensure the function's significant operation points are annotated with log statements.",
+            "Improvise this function by adding log statements which provide insights about its inner workings.",
+            "In this function, please incorporate log statements to capture significant events during the execution."
         ]
-        suffix = " The expected output should be the revised function with logging statements added."
+        suffix = " The expected output should be the revised function with log statements added."
+        instruction = prefix + random.choice(instructions) + suffix
+    if task_name == "task12":
+        prefix = "The input are several log statements (post '<LOG>', split by '<DIV>') and a function (post '<CODE>'). "
+        instructions = [
+            "Incorporate the given log statements into the function at appropriate positions for best readability and debugging effectiveness.",
+            "Adjust the structure of the function by positioning the provided log statements at their appropriate locations.",
+            "Based on the given log data, identify the best locations within the function to incorporate each log statement.",
+            "Fill the missing log statements back into the function where they are most logical and make the most sense.",
+            "Insert the log statements back into the correct positions of the provided function to ensure the function can be properly traced and debugged.",
+            "Evaluate the function and insert the given log statements in the most suitable positions.",
+            "Place each log statement back into the function where it is most relevant for monitoring the function's activities.",
+            "Analyze both the function and log statements, and position each log accordingly to improve the overall quality of the function.",
+            "Decipher the function and place the log lines back into their most fitting positions.",
+            "Restore the log entries in the provided function at positions where they are most informative and useful."
+        ]
+        suffix = " The expected output should be the revised function with log statements added."
         instruction = prefix + random.choice(instructions) + suffix
     
     return instruction
