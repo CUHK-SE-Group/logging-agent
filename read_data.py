@@ -2,19 +2,16 @@ import os
 import pandas as pd
 import random
 
-def get_instruction_format(instruction,input):
+def get_prompt(instruction, input):
     str0 = "### System: You are a logging agent designed to identify or generate log statements for a given code snippet." + "\n"
     str1 = "### Instruction: " + instruction + "\n"
     str2 = "### Input: " + input + "\n"
     str3 = "### Output:" 
 
-    instruction_format = str1 + str2 + str3
-    # print(instruction_format)
-    return instruction_format
+    prompt = str1 + str2 + str3
+    return prompt
 
-
-
-def get_one_instrucion(task_name):
+def get_instrucion(task_name):
     instruction = ""
     if task_name == "task1":
         prefix = ""
@@ -148,19 +145,20 @@ def get_one_instrucion(task_name):
     return instruction
 
 
-def get_one_data(row):
+def read_data(row):
     task_name = row['task']
     input = row['code']
     output = row['label']
 
-    instruction = get_one_instrucion(task_name)
-    data = get_instruction_format(instruction, input)
-    return data, output
+    prompt = []
+    for i in range(len(input)):
+        prompt.append(get_prompt(get_instrucion(task_name[i]), input[i]))
+    return prompt, output
 
 # unit test
 if __name__ == "__main__":
     datafile_path = "task_data/subtasks_test_without_index.tsv"
     df = pd.read_csv(os.path.join(datafile_path), sep='\t')
     row = df.iloc[0]
-    data, label = get_one_data(row)
+    data, label = read_data(row)
     print(data, label)

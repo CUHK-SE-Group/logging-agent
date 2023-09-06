@@ -1,6 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, DataCollatorForLanguageModeling
 from datasets import load_dataset
-from read_data import get_one_data
+from read_data import read_data
 import numpy as np
 import copy
 import os
@@ -41,7 +41,7 @@ def _tokenize_fn(strings, tokenizer):
     )
 
 def preprocess(data):
-    sources, targets = get_one_data(data)
+    sources, targets = read_data(data)
     examples = [s + t for s, t in zip(sources, targets)]
     examples_tokenized, sources_tokenized = [_tokenize_fn(strings, tokenizer) for strings in (examples, sources)]
     input_ids = examples_tokenized["input_ids"]
@@ -86,7 +86,7 @@ training_args = TrainingArguments(
     auto_find_batch_size=True,
     optim="adafactor",
     logging_steps=1,
-    save_strategy='step',
+    save_strategy='steps',
     save_steps=500,
     save_total_limit=3,
     bf16=True,
