@@ -1,14 +1,13 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, DataCollatorForLanguageModeling
 from datasets import load_dataset
 from read_data import get_one_data
-import evaluate
 import numpy as np
 import copy
 import os
 os.environ["WANDB_DISABLED"] = "true"
 
 model_id = "codellama-7b"
-max_length = 1024
+max_length = 2048
 
 device_map = device_map = {"": int(os.environ.get("LOCAL_RANK"))}
 print("-------------", device_map)
@@ -80,25 +79,26 @@ def safe_save_model_for_hf_trainer(trainer, output_dir='./'):
 
 training_args = TrainingArguments(
     f"TrainingTest-{model_id}",
-    per_device_train_batch_size=1,
-    # gradient_checkpointing=True,
-    gradient_accumulation_steps=4,
+    per_device_train_batch_size=4,
+    per_device_eval_batch_size=4,
+    gradient_checkpointing=True,
+    gradient_accumulation_steps=8,
     auto_find_batch_size=True,
     optim="adafactor",
-    logging_steps=100,
-    save_strategy='epoch',
-    learning_rate=5e-6,
+    logging_steps=1,
+    save_strategy='step',
+    save_steps=500,
+    save_total_limit=3,
+    bf16=True,
+    learning_rate=2e-5,
     num_train_epochs=3,
-    # weight_decay=0.01,
-    # max_steps=100,
-    # lr_scheduler_type="cosine",
-    evaluation_strategy='no',
-    save_total_limit=1,
-    # eval_steps=400,
-    # per_device_eval_batch_size=2,
-    fp16=True,
+    weight_decay=0,
+    warmup_ratio=0.03,
+    lr_scheduler_type="cosine",
+    # evaluation_strategy='steps',
+    # eval_steps=500,
 )
-# need early stopping
+
 trainer = Trainer(
     model=model,
     args=training_args,
@@ -110,4 +110,4 @@ trainer = Trainer(
 
 trainer.train()
 trainer.save_state()
-safe_save_model_for_hf_trainer(trainer=trainer, output_dir=training_args.output_dir)
+safe_save_model_for_hf_trainer(trainer=trainer, output_dir="./")
