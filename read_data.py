@@ -155,6 +155,15 @@ def read_data(row):
         prompt.append(get_prompt(get_instrucion(task_name[i]), input[i]))
     return prompt, output
 
+
+def get_one_prompt(row):
+    task_name = row['task']
+    input = row['code']
+
+    prompt = get_prompt(get_instrucion(task_name), input)
+    return prompt
+
+
 # unit test
 if __name__ == "__main__":
     datafile_path = "task_data/subtasks_test_without_index.tsv"
