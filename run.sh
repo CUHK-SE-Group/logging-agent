@@ -2,7 +2,7 @@
 
 data_path="./task_data/mixtasks_train_without_index.tsv"
 model_name="codellama7b"
-output_dir="./output/$model_name"
+output_dir="./tuned_model/$model_name"
 
 nohup deepspeed --include localhost:0,1,2,3,4,5,6,7 train_ddp.py \
     --deepspeed ds_config.json \
@@ -17,7 +17,7 @@ nohup deepspeed --include localhost:0,1,2,3,4,5,6,7 train_ddp.py \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
     --save_steps 500 \
-    --save_total_limit 3 \
+    --save_total_limit 5 \
     --learning_rate 2e-5 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
