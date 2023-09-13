@@ -89,32 +89,21 @@ def evaluation(input_file_path, output_file_path):
             continue
 
         data_num += 1
-        pattern = r'(?=<line\d+>)'
+        # pattern = r'(?=<line\d+>)'
         flag = False
 
         '''Get ground truth'''
         label = row["label"]
-        label_list = re.split(pattern, label)[1:]
-        for gth in label_list:
-            pos_gth, level_gth, message_gth = get_structured_data(gth.strip())
+        pos_gth, level_gth, message_gth = get_structured_data(label)
 
-            pos_gth_list.append(pos_gth)
-            level_gth_list.append(level_gth)
-            message_gth_list.append(message_gth)
+        pos_gth_list.append(pos_gth)
+        level_gth_list.append(level_gth)
+        message_gth_list.append(message_gth)
 
 
         '''Get predictions'''
-        pos_preds, level_preds, message_preds = [], [], []
-        for k in range(len(row["samples"])):
-            samples = row["samples"][k]
-            if pattern.findall(samples) == []:
-                samples = samples.split("<START>")[-1].strip()
-            else:
-                samples = pattern.findall(samples)[0].strip()
-            pos, level, message = get_predict(samples)
-            pos_preds.extend(pos)
-            level_preds.extend(level)
-            message_preds.extend(message)
+        predict = row['predict']
+        pos_preds, level_preds, message_preds = get_predict(predict)
 
         pos_level_mess_dict = {}
         for pos, level, message in zip(pos_preds, level_preds, message_preds):
