@@ -28,7 +28,7 @@ def get_instrucion(task_name):
             "Check this code and confirm whether it needs more logging.",
             "Specify if this piece of code still need additional logging."
         ]
-        suffix = " The expected output should be 'Yes' or 'No', indicating whether the code needs logging."
+        suffix = " The expected output should be 'Yes' or 'No'."
         instruction = prefix + random.choice(instructions) + suffix
     # need logging for the specified line or not ?
     if task_name == "task2":
@@ -44,7 +44,7 @@ def get_instrucion(task_name):
             "Check whether the provided function needs logging for the line.",
             "Specify if the given code could use more log statements for the given line."
         ]
-        suffix = " The expected output should be 'Yes' or 'No', indicating whether the specified line needs logging."
+        suffix = " The expected output should be 'Yes' or 'No'."
         instruction = prefix + random.choice(instructions) + suffix
     # predict number of logging statement needed
     if task_name == "task3":
@@ -61,7 +61,7 @@ def get_instrucion(task_name):
             "Identify the number of log statements required for this function.",
             "Estimate the needed count of log statements within the code snippet."
         ]
-        suffix = " The expected output should be an integer, indicating the number of new log statements needed."
+        suffix = " The expected output should be the number of new log statements needed."
         instruction = prefix + random.choice(instructions) + suffix
     # predict line ID of logging statement needed
     if task_name == "task4":
@@ -78,11 +78,11 @@ def get_instrucion(task_name):
             "Study the code snippet provided, and suggest where additional log statements could make the code more informative.",
             "Record the line IDs in the code snippet where the insertion of logging statements would make it more debug-friendly."
         ]
-        suffix = " The expected output should be the line IDs '<line#>' separated by commas, indicating the positions where log statements should be added."
+        suffix = " The expected output should be the target logging position's line IDs separated by commas."
         instruction = prefix + random.choice(instructions) + suffix
     # predict log level
     if task_name == "task5":
-        prefix = "The input consists of the code with each line separated by line ID '<line#>', and the log levels in this code include 'fatal','error', 'warn', 'info', 'debug', and 'trace'. "
+        prefix = "The input consists of the code with each line separated by line ID '<line#>'. The valid log levels include 'fatal','error', 'warn', 'info', 'debug', and 'trace'. "
         instructions = [
             "Please replace each 'UNKNOWN' log level with the corresponding log level based on its severity.",
             "Allocate correct log levels to replace the 'UNKNOWN' log levels for all log statements.",
@@ -95,22 +95,22 @@ def get_instrucion(task_name):
             "Adjust 'UNKNOWN' log labels, substituting them with the correct log levels.",
             "For each log statement in the function, replace the 'UNKNOWN' log level with the correct severity level."
         ]
-        suffix = " The expected output should be the log levels separated by commas, indicating the appropriate log levels for each log statement."
+        suffix = " The expected output should be the appropriate log levels separated by commas."
         instruction = prefix + random.choice(instructions) + suffix
     # correct log level
     if task_name == "task6":
-        prefix = "The input consists of the code with each line separated by line ID '<line#>', and all the log levels in this code, including 'fatal', 'error', 'warn', 'info', 'debug', and 'trace', are incorrect."
+        prefix = "The input consists of the code with each line separated by line ID '<line#>', and all the log levels in this code are incorrect. The valid log levels include 'fatal', 'error', 'warn', 'info', 'debug', and 'trace'. "
         instructions = [
             "Please revise and correct all incorrect log levels in the given function.",
             "Please rectify every wrong level of log statements in the provided code.",
             "Correct all the log levels used in the function.",
             "Rectify every inaccuracy present in log levels in the function.",
-            "Investigate the function and modify all flawed log levels accordingly.",
+            "Please carefully modify all flawed log levels accordingly.",
             "Please adjust every misused log level to the appropriate ones in the code.",
             "Ensure that the function uses the correct log levels by correcting all the existing levels.",
-            "Analyze the function and revise each one of the incorrect log levels.",
-            "Thoroughly review and amend all incorrect log levels within the function.",
-            "Inspect all lines of the function, spot all false log levels, and correct each of them."
+            "Please revise each one of the incorrect log levels in the provided code.",
+            "Thoroughly amend all incorrect log levels within the function.",
+            "Carefully spot all false log levels in the code snippet and correct each of them."
         ]
         suffix = " The expected output should be the corrected log levels separated by commas."
         instruction = prefix + random.choice(instructions) + suffix
@@ -129,7 +129,7 @@ def get_instrucion(task_name):
             "Try to suggest possible content for the log messages that are masked as 'UNKNOWN'.",
             "Determinate the appropriate message for the concealed log message labeled as 'UNKNOWN' in the function."
         ]
-        suffix = " The expected output should be the log messages separated by the separator '<DIV>', indicating the appropriate log messages for each log statement."
+        suffix = " The expected output should be the appropriate log messages separated by the separator '<DIV>'."
         instruction = prefix + random.choice(instructions) + suffix
     # remove logging statement
     if task_name == "task8":
