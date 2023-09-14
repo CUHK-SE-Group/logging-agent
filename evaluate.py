@@ -17,7 +17,7 @@ def evaluate():
     evaluation(results_file_path, structured_results_path)
     cal_metrics(structured_results_path)
 
-def get_structured_data(gth):
+def get_groundtruth(gth):
     data = gth.split(">")
     pos_gth, log = data[0], ">".join(data[1:])
     pos_gth = pos_gth + ">"
@@ -94,7 +94,7 @@ def evaluation(input_file_path, output_file_path):
 
         '''Get ground truth'''
         label = row["label"]
-        pos_gth, level_gth, message_gth = get_structured_data(label)
+        pos_gth, level_gth, message_gth = get_groundtruth(label)
 
         pos_gth_list.append(pos_gth)
         level_gth_list.append(level_gth)
@@ -105,13 +105,13 @@ def evaluation(input_file_path, output_file_path):
         predict = row['predict']
         pos_preds, level_preds, message_preds = get_predict(predict)
 
-        pos_level_mess_dict = {}
+        pos_level_mess_dict = {} # use position as the key, to find the nearest correct prediction.
         for pos, level, message in zip(pos_preds, level_preds, message_preds):
             if pos not in pos_level_mess_dict \
                     or (pos_level_mess_dict[pos][0] == "" and level != ""):
                 pos_level_mess_dict[pos] = (level, message)
 
-        if pos_gth in pos_level_mess_dict:
+        if pos_gth in pos_level_mess_dict: # only if the position is true, the level and message prediction are valid.
             pos_pred, level_pred, message_pred = pos_gth, pos_level_mess_dict[pos_gth][0], \
                                                     pos_level_mess_dict[pos_gth][1]
             # set default level
