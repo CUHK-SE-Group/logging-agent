@@ -20,6 +20,7 @@ def infer():
         num_beams=1,
         repetition_penalty=1.2,
         max_new_tokens=128,
+        num_return_sequences=5,
     )
 
     df = pd.read_csv(args.in_file, sep='\t')
@@ -33,7 +34,7 @@ def infer():
     load_type = torch.float32
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
-    tokenizer.pad_token_id = 32016
+    tokenizer.pad_token_id = tokenizer.pad_token_id
     tokenizer.bos_token_id = 1
     tokenizer.eos_token_id = 2
     tokenizer.padding_side = "right"
@@ -62,7 +63,7 @@ def infer():
         pred_list = tokenizer.batch_decode(generation_output, 
                                                 skip_special_tokens=True, 
                                                 clean_up_tokenization_spaces=False,
-                                                num_return_sequences=5)
+                                                )
         pred_str = ""
         for pred in pred_list:
             pred_str += pred.strip()
