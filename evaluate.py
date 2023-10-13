@@ -1,41 +1,46 @@
 import re
+import os
 import argparse
 import pandas as pd
 import matplotlib.pylab as plt
-from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+from nltk.translate.bleu_score import sentence_bleu
+
+logging_task = 'task5'
 
 def evaluate():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_name_or_path', default="instruct_logging/codellama7b", type=str, required=True)
-    parser.add_argument('--in_file', default="predictions/raw.tsv", type=str, required=True)
-    parser.add_argument('--out_file', default="predictions/structured.tsv", type=str, required=True)
+    parser.add_argument('--in_file', default="result_file/predictions5_2step.tsv", type=str)
+    parser.add_argument('--out_file', default="result_file/results5_2step.tsv", type=str)
     args = parser.parse_args()
 
     results_file_path = args.in_file
     structured_results_path = args.out_file
 
-    evaluation(results_file_path, structured_results_path)
-    cal_metrics(structured_results_path)
+    # evaluation_sampling(results_file_path, structured_results_path)
+    evaluation_greedy(results_file_path, structured_results_path)
+    # cal_metrics(structured_results_path)
 
-def get_groundtruth(gth):
-    data = gth.split(">")
-    pos_gth, log = data[0], ">".join(data[1:])
-    pos_gth = pos_gth + ">"
-    pos_gth, log = pos_gth.strip(), log.strip()
+def get_logging_greedy(sample):
+    data = sample.split(">")
+    pos, log = data[0], ">".join(data[1:])
+    pos = pos + ">"
+    pos, log = pos.strip(), log.strip()
     res = re.search(r'[.](off)?(fatal)?(error)?(warn)?(info)?(debug)?(trace)?(all)?[(]', log)
-    level_gth = log[res.span()[0] + 1: res.span()[1] - 1].strip()
-    pattern = re.compile('%s\((.+)\)' % level_gth)
-    result = pattern.findall(log)
-
-    if result == []:
-        message_gth = ""
+    if res is not None:
+        level = log[res.span()[0] + 1: res.span()[1] - 1].strip()
+        pattern = re.compile('%s\((.+)\)' % level)
+        result = pattern.findall(log)
+        if result == []:
+            message = ""
+        else:
+            message = result[0]
     else:
-        message_gth = result[0]
-    return pos_gth.lower(), level_gth.lower(), message_gth.lower()
+        level, message = "", ""
+    return pos.lower(), level.lower(), message.lower()
 
 
-def get_predict(pred):
-    datas = pred.split("<line")
+def get_logging_sampling(samples):
+    datas = samples.split("<line")
     datas = [each.strip() for each in datas if each.strip() != ""]
 
     k = 0
@@ -59,7 +64,6 @@ def get_predict(pred):
             pattern = re.compile('%s\((.+)\)' % level_pred)
             result = pattern.findall(log)
             if result == []:
-                # print(log)
                 message_pred = ""
             else:
                 message_pred = result[0]
@@ -72,29 +76,26 @@ def get_predict(pred):
     return pos_preds, level_preds, message_preds
 
 
-def evaluation(input_file_path, output_file_path):
+def evaluation_sampling(input_file_path, output_file_path):
     pos_count, level_count, message_count, bleu_score = 0, 0, 0, 0
     pos_level_count, pos_message_count = 0, 0
     pos_gth_list, level_gth_list, message_gth_list = [], [], []
     pos_pred_list, level_pred_list, message_pred_list = [], [], []
-    count = 0
 
     # uses pandas to read the file, not json
     df_raw = pd.read_csv(input_file_path, sep='\t')
     data_num = 0
-    print("data num:", data_num)
     for i, row in df_raw.iterrows(): 
 
-        if row['task'] != 'task9': # skip the non-logging tasks
+        if row['task'] != logging_task: # skip the non-logging tasks
             continue
 
         data_num += 1
-        # pattern = r'(?=<line\d+>)'
         flag = False
 
         '''Get ground truth'''
         label = row["label"]
-        pos_gth, level_gth, message_gth = get_groundtruth(label)
+        pos_gth, level_gth, message_gth = get_logging_greedy(label)
 
         pos_gth_list.append(pos_gth)
         level_gth_list.append(level_gth)
@@ -103,7 +104,7 @@ def evaluation(input_file_path, output_file_path):
 
         '''Get predictions'''
         predict = row['predict']
-        pos_preds, level_preds, message_preds = get_predict(predict)
+        pos_preds, level_preds, message_preds = get_logging_sampling(predict)
 
         pos_level_mess_dict = {} # use position as the key, to find the nearest correct prediction.
         for pos, level, message in zip(pos_preds, level_preds, message_preds):
@@ -143,7 +144,6 @@ def evaluation(input_file_path, output_file_path):
             for key in pos_level_mess_dict:
                 if key == "":
                     continue
-                # print("key: ", key)
                 cur = key.split("<line")[-1][:-1]  # <line1> -> 1> -> 1
                 if cur.isdigit():
                     if abs(int(cur) - pos_tar_idx) < min_dis:
@@ -172,16 +172,12 @@ def evaluation(input_file_path, output_file_path):
         level_pred_list.append(level_pred)
         message_pred_list.append(message_pred)
 
-    print("pos: ", pos_count)
-    print("levels: ", level_count)
-    print("message: ", message_count)
-
-    print("pos acc: ", round(pos_count/data_num, 3))
-    print("levels acc: ", round(level_count/data_num, 3))
-    print("message acc: ", round(message_count/data_num, 3))
-    print("levels acc under pos right: ", round(pos_level_count/pos_count, 3))
-    print("message acc under pos right: ", round(pos_message_count/pos_count, 3))
-    print("bleu_score: ", round(bleu_score/data_num, 3))
+    print("position accuracy (PA): ", round(pos_count/data_num, 3))
+    print("level accuracy (LA): ", round(level_count/data_num, 3))
+    print("message accuracy (MA): ", round(message_count/data_num, 3))
+    print("conditional level accuracy (CLA): ", round(pos_level_count/pos_count, 3))
+    print("conditional message accuracy (CMA): ", round(pos_message_count/pos_count, 3))
+    print("BLEU-DM: ", round(bleu_score/data_num, 3))
 
     df = pd.DataFrame({"pos_gth": pos_gth_list, "pos_pred": pos_pred_list})
     df["pos_res"] = df["pos_gth"] == df["pos_pred"]
@@ -191,7 +187,75 @@ def evaluation(input_file_path, output_file_path):
     df["message_gth"] = message_gth_list
     df["message_pred"] = message_pred_list
     df["message_res"] = df["message_gth"] == df["message_pred"]
-    df["code"] = df_raw['code']
+    df["prompt"] = df_raw['prompt']
+    df.to_csv(output_file_path, sep='\t')
+
+
+def evaluation_greedy(input_file_path, output_file_path):
+    pos_count, level_count, message_count, bleu_score = 0, 0, 0, 0
+    pos_level_count, pos_message_count = 0, 0
+    pos_gth_list, level_gth_list, message_gth_list = [], [], []
+    pos_pred_list, level_pred_list, message_pred_list = [], [], []
+
+    # uses pandas to read the file, not json
+    df_raw = pd.read_csv(input_file_path, sep='\t')
+    data_num = 0
+    for i, row in df_raw.iterrows(): 
+
+        if row['task'] != logging_task: # skip the non-logging tasks
+            continue
+
+        data_num += 1
+
+        '''Get ground truth'''
+        label = row["label"]
+        pos_gth, level_gth, message_gth = get_logging_greedy(label)
+
+        pos_gth_list.append(pos_gth)
+        level_gth_list.append(level_gth)
+        message_gth_list.append(message_gth)
+
+
+        '''Get predictions'''
+        predict = row['predict']
+        pos_pred, level_pred, message_pred = get_logging_greedy(predict)
+
+        pos_pred_list.append(pos_pred)
+        level_pred_list.append(level_pred)
+        message_pred_list.append(message_pred)
+
+        if pos_gth == pos_pred:
+            pos_count += 1
+        if level_gth == level_pred:
+            level_count += 1
+        if pos_gth == pos_pred and level_gth == level_pred:
+            pos_level_count += 1
+        if message_gth == message_pred:
+            message_count += 1
+        if pos_gth == pos_pred and message_gth == message_pred:
+            pos_message_count += 1
+
+        if message_gth == message_pred:
+            bleu_score += 1
+        else:
+            bleu_score += sentence_bleu([message_gth.split()], message_pred.split())
+
+    print("position accuracy (PA): ", round(pos_count/data_num, 3))
+    print("level accuracy (LA): ", round(level_count/data_num, 3))
+    print("message accuracy (MA): ", round(message_count/data_num, 3))
+    print("conditional level accuracy (CLA): ", round(pos_level_count/pos_count, 3))
+    print("conditional message accuracy (CMA): ", round(pos_message_count/pos_count, 3))
+    print("BLEU-DM: ", round(bleu_score/data_num, 3))
+
+    df = pd.DataFrame({"pos_gth": pos_gth_list, "pos_pred": pos_pred_list})
+    df["pos_res"] = df["pos_gth"] == df["pos_pred"]
+    df["level_gth"] = level_gth_list
+    df["level_pred"] = level_pred_list
+    df["level_res"] = df["level_gth"] == df["level_pred"]
+    df["message_gth"] = message_gth_list
+    df["message_pred"] = message_pred_list
+    df["message_res"] = df["message_gth"] == df["message_pred"]
+    # df["prompt"] = df_raw['prompt']
     df.to_csv(output_file_path, sep='\t')
 
 
@@ -204,7 +268,7 @@ def plot(distance, file_name):
     plt.title(file_name)
     plt.xlabel("distance")
     plt.ylabel("nums")
-    plt.savefig(file_name)
+    plt.savefig("figures/" +file_name + ".pdf")
 
 
 def line2idx(x):
@@ -217,7 +281,7 @@ def line2idx(x):
 
 
 def cal_metrics(data_dir):
-    df = pd.read_csv(data_dir)
+    df = pd.read_csv(data_dir, sep='\t')
     pos_true = len(df[df["pos_res"] == True])
     pos_level_true = len(df[df["pos_res"] == True][df["level_res"] == True])
     pos_message_true = len(df[df["pos_res"] == True][df["message_res"] == True])
@@ -256,8 +320,13 @@ def cal_metrics(data_dir):
             else:
                 level_distance[dis] = 1
 
-    plot(position_distance, "results/position_distance")
-    plot(level_distance, "results/level_distance")
+    if not os.path.exists("figures"):
+        os.mkdir("figures")
+    plot(position_distance, "position_distance")
+    plt.show()
+    plot(level_distance, "level_distance")
+    plt.show()
+
 
 
 if __name__ == '__main__':

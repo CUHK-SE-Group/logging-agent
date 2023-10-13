@@ -25,4 +25,4 @@ nohup deepspeed --include localhost:0,1,2,3,4,5,6,7 train_ddp.py \
     --logging_steps 1 \
     --report_to none \
     --bf16 True \
-    > shell.log
+    > train.log

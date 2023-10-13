@@ -19,8 +19,11 @@ def get_instrucion(task_name, lineID=None):
     # predict log message
     if task_name == "task3":
         instruction = "Infer the missing content of the log message that has been masked as 'UNKNOWN' at {}.".format(lineID)
-    # generate logging statement
+    # given pos, generate logging statement (level,msg)
     if task_name == "task4":
+        instruction = "Insert a log statement for the code snippet at {}.".format(lineID)
+    # generate logging statement (pos,level,msg)
+    if task_name == "task5":
         instruction = "Generate a complete log statement with an appropriate line index ahead for the given input code."
     return instruction
 
