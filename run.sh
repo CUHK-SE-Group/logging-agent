@@ -1,8 +1,8 @@
 #!/bin/bash
 
-data_path="./task_data/mixtasks_train.tsv"
+data_path="./task_data/mixtasks1-5_train.tsv"
 model_name="codellama7b"
-output_dir="./instruct_logging/codellama7b"
+output_dir="./instruct_logging/codellama7b_task1-5"
 
 nohup deepspeed --include localhost:0,1,2,3,4,5,6,7 train_ddp.py \
     --deepspeed ds_config.json \
