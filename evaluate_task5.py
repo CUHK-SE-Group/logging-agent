@@ -6,7 +6,7 @@ import matplotlib.pylab as plt
 from nltk.translate.bleu_score import sentence_bleu
 from rouge_score import rouge_scorer
 
-logging_task = 'task4'
+logging_task = 'task5'
 
 def evaluate():
     parser = argparse.ArgumentParser()
