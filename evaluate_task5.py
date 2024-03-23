@@ -4,8 +4,9 @@ import argparse
 import pandas as pd
 import matplotlib.pylab as plt
 from nltk.translate.bleu_score import sentence_bleu
+from rouge_score import rouge_scorer
 
-logging_task = 'task5'
+logging_task = 'task4'
 
 def evaluate():
     parser = argparse.ArgumentParser()
@@ -39,25 +40,69 @@ def get_logging_greedy(sample):
     return pos.lower(), level.lower(), message.lower()
 
 
+def get_logging_greedy(sample):
+    # sample = str(sample)
+    data = sample.split(">")
+    pos, log = data[0], ">".join(data[1:])
+    pos = pos + ">"
+    pos, log = pos.strip(), log.strip()
+    res = re.search(r'[.](off)?(fatal)?(error)?(warn)?(info)?(debug)?(trace)?(all)?[(]', log)
+    if res is not None:
+        level = log[res.span()[0] + 1: res.span()[1] - 1].strip()
+        pattern = re.compile('%s\((.+)\)' % level)
+        result = pattern.findall(log)
+        if result == []:
+            message = ""
+        else:
+            message = result[0]
+    else:
+        level, message = "", ""
+    return pos.lower(), level.lower(), message.lower()
+
+def get_logging_greedy_without_position(sample):
+    # sample = str(sample)
+    log = str(sample)
+    # print(log)
+    res = re.search(r'[.](off)?(fatal)?(error)?(warn)?(info)?(debug)?(trace)?(all)?[(]', log)
+    if res is not None:
+        level = log[res.span()[0] + 1: res.span()[1] - 1].strip()
+        pattern = re.compile('%s\((.+)\)' % level)
+        result = pattern.findall(log)
+        if result == []:
+            message = ""
+        else:
+            message = result[0]
+    else:
+        level, message = "", ""
+    return 'pos', level.lower(), message.lower()
+
+
 def evaluation_greedy(input_file_path, output_file_path):
-    pos_count, level_count, message_count, bleu_score = 0, 0, 0, 0
+    pos_count, level_count, message_count, bleu_score, rouge_score = 0, 0, 0, 0, 0
     pos_level_count, pos_message_count = 0, 0
     pos_gth_list, level_gth_list, message_gth_list = [], [], []
     pos_pred_list, level_pred_list, message_pred_list = [], [], []
-
+    scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
     # uses pandas to read the file, not json
     df_raw = pd.read_csv(input_file_path, sep='\t')
     data_num = 0
+
+    df_raw["label"].fillna("", inplace=True)
+    df_raw["predict"].fillna("", inplace=True)
+
     for i, row in df_raw.iterrows(): 
 
-        if row['task'] != logging_task: # skip the non-logging tasks
-            continue
+        # if row['task'] != logging_task: # skip the non-logging tasks
+        #     continue
+
+
 
         data_num += 1
-
         '''Get ground truth'''
         label = row["label"]
         pos_gth, level_gth, message_gth = get_logging_greedy(label)
+        # pos_gth, level_gth, message_gth = get_logging_greedy_without_position(label)
+        # pos_gth, level_gth, message_gth = parse_log_string(label)
 
         pos_gth_list.append(pos_gth)
         level_gth_list.append(level_gth)
@@ -67,10 +112,20 @@ def evaluation_greedy(input_file_path, output_file_path):
         '''Get predictions'''
         predict = row['predict']
         pos_pred, level_pred, message_pred = get_logging_greedy(predict)
+        # pos_pred, level_pred, message_pred = get_logging_greedy_without_position(predict)
+        # pos_pred, level_pred, message_pred = parse_log_string(predict)
 
         pos_pred_list.append(pos_pred)
         level_pred_list.append(level_pred)
         message_pred_list.append(message_pred)
+
+        # print(pos_gth)
+        # print(pos_pred)
+
+        # pos_pred = pos_gth
+
+        # if i >= 2:
+        #     exit()
 
         if pos_gth == pos_pred:
             pos_count += 1
@@ -85,8 +140,18 @@ def evaluation_greedy(input_file_path, output_file_path):
 
         if message_gth == message_pred:
             bleu_score += 1
+            rouge_score += 1
         else:
             bleu_score += sentence_bleu([message_gth.split()], message_pred.split())
+            rouge_score += scorer.score(message_gth, message_pred)['rougeL'].fmeasure
+            # try:
+            #     bleu_score += sentence_bleu([message_gth.split()], message_pred.split())
+            #     rouge_score += scorer.score(message_gth.split(), message_pred.split())['rougeL'].fmeasure
+            # except Exception as e:
+            #     print(e)
+            #     print("message_gth: ", message_gth)
+            #     print("message_pred: ", message_pred)
+            #     break
 
     print("position accuracy (PA): ", round(pos_count/data_num, 3))
     print("level accuracy (LA): ", round(level_count/data_num, 3))
@@ -94,6 +159,8 @@ def evaluation_greedy(input_file_path, output_file_path):
     print("conditional level accuracy (CLA): ", round(pos_level_count/pos_count, 3))
     print("conditional message accuracy (CMA): ", round(pos_message_count/pos_count, 3))
     print("BLEU-DM: ", round(bleu_score/data_num, 3))
+    print("ROUGE-L: ", round(rouge_score/data_num, 3))
+    
 
     df = pd.DataFrame({"pos_gth": pos_gth_list, "pos_pred": pos_pred_list})
     df["pos_res"] = df["pos_gth"] == df["pos_pred"]
@@ -106,6 +173,21 @@ def evaluation_greedy(input_file_path, output_file_path):
     # df["prompt"] = df_raw['prompt']
     df.to_csv(output_file_path, sep='\t')
 
+    level_distance = {}
+    level2idx = {"trace": 0, "debug": 1, "info": 2, "warn": 3, "error": 4, "fatal": 5, "": 20, "all": 0}
+    df["level_gth_idx"] = df["level_gth"].apply(lambda x: level2idx[x])
+    df["level_pred"].fillna("", inplace=True)
+    df["level_pred_idx"] = df["level_pred"].apply(lambda x: level2idx[x])
+
+    for i, row in df.iterrows(): 
+        dis = min(abs(row["level_gth_idx"] - row["level_pred_idx"]), 6)  # if pred level in null， set distance as 6
+        if dis in level_distance:
+            level_distance[dis] += 1
+        else:
+            level_distance[dis] = 1
+
+    # print("average level distance: ", sum([(6-k)*v for k, v in level_distance.items()])/data_num)
+    print("average level shift rate: ", sum([(6-k)*v for k, v in level_distance.items()])/data_num/6)
 
 def plot(distance, file_name):
     plt.figure()
