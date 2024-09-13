@@ -22,6 +22,10 @@
 └── draw.py
 ```
 
+## Model link
+
+[Google Drive](https://drive.google.com/file/d/1QtpvwruBztohny9KSGfNPT8HC0eQuu9y/view?usp=sharing)
+
 
 
 
